@@ -849,7 +849,7 @@ window.addTag = function(e, type) {
   const arr = type==='offer'?offerTags:wantTags;
   arr.push(val);
   const pill=document.createElement('span');pill.className='tag-pill';
-  pill.innerHTML=val+'<button onclick="removeTag(this,''+type+'',''+val+'')">×</button>';
+  pill.innerHTML=val+'<button onclick="removeTag(this,\''+type+'\',\''+val+'\')">×</button>';
   document.getElementById(type+'-wrap').insertBefore(pill, inp);
   inp.value='';
 };
