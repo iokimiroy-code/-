@@ -681,13 +681,63 @@ main{max-width:1080px;margin:0 auto;padding:28px 24px;}
 
 <div class="toast" id="toast"></div>
 
+<script>
+// Proxy functions for HTML onclick handlers - delegates to window.* set by module
+function submitAuth(){if(window.submitAuth)window.submitAuth();else console.error('Module not loaded yet');}
+function switchAuthTab(m){if(window.switchAuthTab)window.switchAuthTab(m);}
+function signInGoogle(){if(window.signInGoogle)window.signInGoogle();}
+function signOut(){if(window.signOut)window.signOut();}
+function showPage(p){if(window.showPage)window.showPage(p);}
+function toggleBeanPanel(){if(window.toggleBeanPanel)window.toggleBeanPanel();}
+function togglePicker(t){if(window.togglePicker)window.togglePicker(t);}
+function switchCityTab(t){if(window.switchCityTab)window.switchCityTab(t);}
+function renderCityList(q){if(window.renderCityList)window.renderCityList(q);}
+function toggleCity(k,c){if(window.toggleCity)window.toggleCity(k,c);}
+function clearCities(){if(window.clearCities)window.clearCities();}
+function pickMode(el,v){if(window.pickMode)window.pickMode(el,v);}
+function clickVerified(){if(window.clickVerified)window.clickVerified();}
+function clearAllFilters(){if(window.clearAllFilters)window.clearAllFilters();}
+function debouncedSearch(){if(window.debouncedSearch)window.debouncedSearch();}
+function clearSearch(){if(window.clearSearch)window.clearSearch();}
+function openInvite(id,n){if(window.openInvite)window.openInvite(id,n);}
+function closeModal(){if(window.closeModal)window.closeModal();}
+function sendInvite(){if(window.sendInvite)window.sendInvite();}
+function saveProfile(){if(window.saveProfile)window.saveProfile();}
+function toggleModeP(b,v){if(window.toggleModeP)window.toggleModeP(b,v);}
+function handleAvatarUpload(i){if(window.handleAvatarUpload)window.handleAvatarUpload(i);}
+function addTag(e,t){if(window.addTag)window.addTag(e,t);}
+function removeTag(b,t,v){if(window.removeTag)window.removeTag(b,t,v);}
+function obToggleMode(b,v){if(window.obToggleMode)window.obToggleMode(b,v);}
+function obNext(s){if(window.obNext)window.obNext(s);}
+function obFinish(){if(window.obFinish)window.obFinish();}
+function initGeo(){if(window.initGeo)window.initGeo();}
+function closeLBM(){if(window.closeLBM)window.closeLBM();}
+function confirmTreat(h){if(window.confirmTreat)window.confirmTreat(h);}
+function editMeetingLink(uid){if(window.editMeetingLink)window.editMeetingLink(uid);}
+function copyMeetingLink(uid){if(window.copyMeetingLink)window.copyMeetingLink(uid);}
+function copyText(t,el){if(window.copyText)window.copyText(t,el);}
+function sendChat(uid){if(window.sendChat)window.sendChat(uid);}
+function renderDiscover(){if(window.renderDiscover)window.renderDiscover();}
+</script>
 <script type="module">
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SURL = 'https://slxciuczcgwefynrbeht.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNseGNpdWN6Y2d3ZWZ5bnJiZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Mjg1MzYsImV4cCI6MjA4OTQwNDUzNn0.4S3oYB6LZD_ESPJsCfNCBOjolGIdxZpwy4MWS5WwhwU';
+window.sb = createClient(SURL, SKEY);
+window._supaReady = true;
+document.dispatchEvent(new Event('supabase-ready'));
+</script>
+<script>
+let sb; // will be set when supabase module loads
+// Wait for supabase to be ready
+function waitForSupa(cb) {
+  if (window.sb) { cb(); return; }
+  document.addEventListener('supabase-ready', cb, { once: true });
+}
 
 const SURL = 'https://slxciuczcgwefynrbeht.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNseGNpdWN6Y2d3ZWZ5bnJiZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Mjg1MzYsImV4cCI6MjA4OTQwNDUzNn0.4S3oYB6LZD_ESPJsCfNCBOjolGIdxZpwy4MWS5WwhwU';
-const sb = createClient(SURL, SKEY);
+
 
 // ── STATE ──
 let currentUser = null;
@@ -1157,7 +1207,7 @@ window.toggleCity = async function(key, isCustom) {
 window.clearCities=function(){selectedCities.clear();cityFilter='all';renderCityList();updateActiveTags();renderDiscover();}
 function updateActiveTags(){
   const wrap=document.getElementById('city-tags');wrap.innerHTML='';
-  selectedCities.forEach(key=>{const city=ALL_CITIES.find(c=>c.key===key);if(!city)return;const tag=document.createElement('div');tag.className='active-city-tag';tag.innerHTML=city.zh+'<button onclick="toggleCity(''+key+'')">×</button>';wrap.appendChild(tag);});
+  selectedCities.forEach(key=>{const city=ALL_CITIES.find(c=>c.key===key);if(!city)return;const tag=document.createElement('div');tag.className='active-city-tag';tag.innerHTML=city.zh+'<button onclick="toggleCity(this.dataset.k)" data-k="'+escHtml(key)+'">×</button>';wrap.appendChild(tag);});
   document.getElementById('city-btn-label').textContent=selectedCities.size>0?'城市 ('+selectedCities.size+')':'城市';
   document.getElementById('city-btn').classList.toggle('active',selectedCities.size>0);
   const hasF=selectedCities.size>0||modeFilter!=='all';
@@ -1215,7 +1265,7 @@ window.renderRequests=async function(){
     card.innerHTML=buildAv(u.avatar_url||'🧑',u.credit||60,42)+
       '<div class="req-body"><div class="req-name">'+(u.name||'用户')+'</div><div class="req-role">'+(u.role||'')+' · '+(u.city||'')+'</div>'+
       '<div class="req-msg">"'+r.message+'"</div>'+
-      '<div class="req-actions"><button class="btn-accept" onclick="acceptReq(''+r.id+'',''+u.id+'')">Accept ✓</button><button class="btn-decline" onclick="declineReq(''+r.id+'')">Decline</button></div>'+
+      '<div class="req-actions"><button class="btn-accept" onclick="acceptReq(this.dataset.rid,this.dataset.uid)" data-rid="'+r.id+'" data-uid="'+u.id+'">Accept ✓</button><button class="btn-decline" onclick="declineReq(this.dataset.rid)" data-rid="'+r.id+'">Decline</button></div>'+
       '</div>';
     list.appendChild(card);
   });
@@ -1223,12 +1273,16 @@ window.renderRequests=async function(){
 window.acceptReq=async function(rid,fromId){
   await sb.from('invites').update({status:'accepted'}).eq('id',rid);
   localMatches.push({userId:fromId});
-  document.querySelector('[onclick*="''+rid+''"]')?.closest('.req-card')?.remove();
+  document.querySelectorAll('.req-card').forEach(card=>{
+    if(card.querySelector('[data-rid="'+rid+'"]')) card.remove();
+  });
   loadRequests();showToast('已接受！联系方式已解锁 🎉');
 }
 window.declineReq=async function(rid){
   await sb.from('invites').update({status:'declined'}).eq('id',rid);
-  document.querySelector('[onclick*="''+rid+''"]')?.closest('.req-card')?.remove();
+  document.querySelectorAll('.req-card').forEach(card=>{
+    if(card.querySelector('[data-rid="'+rid+'"]')) card.remove();
+  });
   loadRequests();showToast('已婉拒');
 }
 // Chat state per match
@@ -1331,7 +1385,7 @@ function buildMatchCard(container, u) {
     '<div class="mc-wechat">' +
     '<span class="mc-wechat-label">微信号</span>' +
     '<span class="mc-wechat-val">'+(u.wechat||'未填写')+'</span>' +
-    '<div class="mc-wechat-copy" onclick="copyText(''+(u.wechat||'')+'',this)" title="复制微信号">' +
+    '<div class="mc-wechat-copy" data-wechat="'+(u.wechat||'')+'" onclick="copyText(this.dataset.wechat,this)" title="复制微信号">' +
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
     '</div></div>' +
 
@@ -1340,11 +1394,11 @@ function buildMatchCard(container, u) {
     '<div class="mc-meeting-label">' + modeIcon + ' ' + meetLabel + '</div>' +
     '<div class="mc-link-row">' +
     '<input class="mc-link-input" id="ml-'+u.id+'" value="'+meetingLinks[u.id]+'" placeholder="'+meetPH+'" readonly>' +
-    '<div class="mc-icon-btn" onclick="editMeetingLink(''+u.id+'')" title="编辑">' +
+    '<div class="mc-icon-btn" data-uid="'+u.id+'" onclick="editMeetingLink(this.dataset.uid)" title="编辑">' +
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
     '</div>' +
     '<div style="position:relative;">' +
-    '<div class="mc-icon-btn" id="cpbtn-'+u.id+'" onclick="copyMeetingLink(''+u.id+'')" title="复制">' +
+    '<div class="mc-icon-btn" id="cpbtn-'+u.id+'" data-uid="'+u.id+'" onclick="copyMeetingLink(this.dataset.uid)" title="复制">' +
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
     '</div>' +
     '<div class="copy-bubble" id="cpbub-'+u.id+'">Copied!</div>' +
@@ -1360,8 +1414,8 @@ function buildMatchCard(container, u) {
     '<div class="mc-chat">' +
     '<div class="chat-history" id="ch-'+u.id+'"><div class="chat-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>还没有消息，先打个招呼吧</span></div></div>' +
     '<div class="chat-input-row">' +
-    '<input class="chat-input" id="ci-'+u.id+'" placeholder="发消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(''+u.id+'')}">' +
-    '<button class="chat-send-btn" onclick="sendChat(''+u.id+'')">' +
+    '<input class="mc-chat-inp" id="ci-'+u.id+'" data-uid="'+u.id+'" placeholder="发消息…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChat(this.dataset.uid)}">' +
+    '<button class="chat-send-btn" data-uid="'+u.id+'" onclick="sendChat(this.dataset.uid)">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>' +
     '</button>' +
     '</div></div>';
@@ -1585,6 +1639,22 @@ window.showPage=function(id){
 
 // ── TOAST ──
 window.showToast=function(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+// Auto-init when supabase ready
+waitForSupa(() => {
+  sb = window.sb; // make sb available in this scope
+  // Re-wire auth state listener
+  if (sb) {
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        const {data} = await window.sb.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (data && data.name) { myProfile = data; enterApp(); }
+        else { document.getElementById('auth-screen').style.display='none'; document.getElementById('onboard-screen').style.display='block'; }
+      }
+    });
+  }
+});
 </script>
 </body>
 </html>
