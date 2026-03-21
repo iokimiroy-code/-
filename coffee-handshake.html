@@ -728,12 +728,9 @@ window._supaReady = true;
 document.dispatchEvent(new Event('supabase-ready'));
 </script>
 <script>
-let sb; // will be set when supabase module loads
-// Wait for supabase to be ready
-function waitForSupa(cb) {
-  if (window.sb) { cb(); return; }
-  document.addEventListener('supabase-ready', cb, { once: true });
-}
+// sb getter - always uses the module-loaded client
+Object.defineProperty(window, 'sb', { configurable: true, writable: true, value: undefined });
+function getSb() { return window.sb; }
 
 const SURL = 'https://slxciuczcgwefynrbeht.supabase.co';
 const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNseGNpdWN6Y2d3ZWZ5bnJiZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Mjg1MzYsImV4cCI6MjA4OTQwNDUzNn0.4S3oYB6LZD_ESPJsCfNCBOjolGIdxZpwy4MWS5WwhwU';
@@ -852,10 +849,10 @@ window.submitAuth = async function() {
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span>'+(authMode==='login'?'登录中…':'注册中…');
   if(authMode==='login'){
-    const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    const {data,error}=await window.sb.auth.signInWithPassword({email,password:pw});
     if(error){showAuthErr(error.message==='Invalid login credentials'?'邮箱或密码错误':error.message);}
   } else {
-    const {data,error}=await sb.auth.signUp({email,password:pw});
+    const {data,error}=await window.sb.auth.signUp({email,password:pw});
     if(error){showAuthErr(error.message);}
     else{showAuthOk('注册成功！请检查邮箱点击验证链接，然后返回登录。');}
   }
@@ -864,19 +861,19 @@ window.submitAuth = async function() {
 };
 
 window.signInGoogle = async function() {
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+  await window.sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
 };
 
 window.signOut = async function() {
-  await sb.auth.signOut();
+  await window.sb.auth.signOut();
   location.reload();
 };
 
 // ── SESSION LISTENER ──
-sb.auth.onAuthStateChange(async (event, session) => {
+if (sb) window.sb.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
     currentUser = session.user;
-    const {data} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+    const {data} = await window.sb.from('profiles').select('*').eq('id', currentUser.id).single();
     if (data && data.name) {
       myProfile = data;
       enterApp();
@@ -952,7 +949,7 @@ window.obFinish = async function() {
     cafe:document.getElementById('ob-cafe').value.trim(),
     credit:60,
   };
-  const {error}=await sb.from('profiles').upsert(profile);
+  const {error}=await window.sb.from('profiles').upsert(profile);
   if(error){showToast('保存失败: '+error.message);btn.textContent='完成，进入广场 ☕';return;}
   myProfile=profile;
   enterApp();
@@ -965,7 +962,7 @@ async function enterApp() {
   document.getElementById('app').style.display='block';
   document.getElementById('nav-uname').textContent=myProfile?.name||currentUser.email.split('@')[0];
   // load all profiles
-  const {data}=await sb.from('profiles').select('*').neq('id',currentUser.id).limit(50);
+  const {data}=await window.sb.from('profiles').select('*').neq('id',currentUser.id).limit(50);
   allProfiles=data||[];
   renderDiscover();
   loadRequests();
@@ -1239,7 +1236,7 @@ window.sendInvite=async function(){
   if(!msg){showToast('请写一句申请理由 ☕');return;}
   if(userBeans<=0){closeModal();openLBM();return;}
   const btn=document.querySelector('.modal-send');btn.disabled=true;btn.textContent='发送中…';
-  const {error}=await sb.from('invites').insert({from_id:currentUser.id,to_id:inviteTargetId,message:msg});
+  const {error}=await window.sb.from('invites').insert({from_id:currentUser.id,to_id:inviteTargetId,message:msg});
   btn.disabled=false;btn.textContent='发送 ✦';
   if(error){showToast('发送失败: '+error.message);return;}
   addBeans(-1,'发出邀请');sentInvites.add(inviteTargetId);closeModal();renderDiscover();showToast('邀请已发送！等待对方回应 ✦');
@@ -1248,7 +1245,7 @@ window.sendInvite=async function(){
 // ── REQUESTS ──
 async function loadRequests(){
   if(!currentUser)return;
-  const {data}=await sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','pending');
+  const {data}=await window.sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','pending');
   const badge=document.getElementById('req-badge');
   const n=data?.length||0;
   badge.style.display=n>0?'inline':'none';badge.textContent=n;
@@ -1256,7 +1253,7 @@ async function loadRequests(){
 window.renderRequests=async function(){
   const list=document.getElementById('req-list');
   list.innerHTML='<div class="empty"><div class="ei">⏳</div><p>加载中…</p></div>';
-  const {data}=await sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','pending');
+  const {data}=await window.sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','pending');
   if(!data?.length){list.innerHTML='<div class="empty"><div class="ei">📭</div><p>暂时没有新邀请</p></div>';return;}
   list.innerHTML='';
   data.forEach(r=>{
@@ -1271,7 +1268,7 @@ window.renderRequests=async function(){
   });
 }
 window.acceptReq=async function(rid,fromId){
-  await sb.from('invites').update({status:'accepted'}).eq('id',rid);
+  await window.sb.from('invites').update({status:'accepted'}).eq('id',rid);
   localMatches.push({userId:fromId});
   document.querySelectorAll('.req-card').forEach(card=>{
     if(card.querySelector('[data-rid="'+rid+'"]')) card.remove();
@@ -1279,7 +1276,7 @@ window.acceptReq=async function(rid,fromId){
   loadRequests();showToast('已接受！联系方式已解锁 🎉');
 }
 window.declineReq=async function(rid){
-  await sb.from('invites').update({status:'declined'}).eq('id',rid);
+  await window.sb.from('invites').update({status:'declined'}).eq('id',rid);
   document.querySelectorAll('.req-card').forEach(card=>{
     if(card.querySelector('[data-rid="'+rid+'"]')) card.remove();
   });
@@ -1292,8 +1289,8 @@ const meetingLinks = {}; // {userId: string}
 window.renderMatches=async function(){
   const list=document.getElementById('match-list');
   list.innerHTML='<div class="empty"><div class="ei">⏳</div><p>加载中…</p></div>';
-  const {data:sent}=await sb.from('invites').select('*,to:to_id(*)').eq('from_id',currentUser.id).eq('status','accepted');
-  const {data:recv}=await sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','accepted');
+  const {data:sent}=await window.sb.from('invites').select('*,to:to_id(*)').eq('from_id',currentUser.id).eq('status','accepted');
+  const {data:recv}=await window.sb.from('invites').select('*,from:from_id(*)').eq('to_id',currentUser.id).eq('status','accepted');
   const allMatches=[...(sent||[]).map(r=>r.to),...(recv||[]).map(r=>r.from)].filter(Boolean);
   if(!allMatches.length){list.innerHTML='<div class="empty"><div class="ei">🤝</div><p>还没有匹配<br>先去发送邀请吧</p></div>';return;}
   list.innerHTML='';
@@ -1306,14 +1303,14 @@ async function getOrCreateChat(otherUserId) {
   const u1 = me < otherUserId ? me : otherUserId;
   const u2 = me < otherUserId ? otherUserId : me;
 
-  let { data } = await sb.from('chats')
+  let { data } = await window.sb.from('chats')
     .select('*')
     .eq('user1_id', u1)
     .eq('user2_id', u2)
     .single();
 
   if (!data) {
-    const { data: newChat } = await sb.from('chats')
+    const { data: newChat } = await window.sb.from('chats')
       .insert({ user1_id: u1, user2_id: u2 })
       .select()
       .single();
@@ -1551,7 +1548,7 @@ window.sendChat = async function(uid) {
   renderChat(uid);
 
   // Insert to Supabase
-  const { error } = await sb.from('messages').insert({
+  const { error } = await window.sb.from('messages').insert({
     chat_id: chatId,
     sender_id: currentUser.id,
     content: text
@@ -1578,7 +1575,7 @@ window.saveProfile=async function(){
     wechat:document.getElementById('p-wechat').value.trim(),
     cafe:document.getElementById('p-cafe').value.trim(),
   };
-  const {error}=await sb.from('profiles').update(profile).eq('id',currentUser.id);
+  const {error}=await window.sb.from('profiles').update(profile).eq('id',currentUser.id);
   if(error){showToast('保存失败: '+error.message);return;}
   myProfile={...myProfile,...profile};
   showToast('名片已保存 ✦');
@@ -1645,7 +1642,7 @@ waitForSupa(() => {
   sb = window.sb; // make sb available in this scope
   // Re-wire auth state listener
   if (sb) {
-    sb.auth.onAuthStateChange(async (event, session) => {
+    window.sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         currentUser = session.user;
         const {data} = await window.sb.from('profiles').select('*').eq('id', currentUser.id).single();
